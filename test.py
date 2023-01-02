@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from transform import *
-
+from scipy.spatial.transform import Rotation as R
 
 def test_normal_vector():
     # Test 1: Check normal vector of a plane with points on the xy plane
@@ -167,7 +167,29 @@ def test_calculate_transform():
 
     print('full transform tests pass')
 
+def test_real_data():
+    print("\n\n")
+    print("--------------------------------")
+    print("Real data test results: ")
+    print("--------------------------------")
+
+    # Test 1
+    T1 = transformation_matrix(origin=[-0.815,	1.795,	-2.35], euler_angles = (0, 0, 0.0039*180/np.pi))
+    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, 0))
+    xy_points1 = np.array([[47.864, 32.161, -2.96], [47.864, 271.839, -2.12], [185.649, 271.839, -1.74], [185.649, 32.161, -2.58]])
+    xz_points1 = np.array([[34.83,	1.9,	-12.70], [183.315, 2.37, -12.70], [109.0725,	2.135,	0]])
+    yz_points1 = np.array([[-1.01,	32.909,	-12.70], [-2.34,	270.754,	-12.70], [-1.675,	151.8315,	0]])
+    T = calculate_transform(xy_points1, yz_points1, xz_points1, T_initial)
+    euler_angles = R.from_matrix(T[:3, :3]).as_euler('ZYX', degrees=True)
+
+    print(f"New transform: {T}\n")
+    print(f"Old transform: {T1}\n\n")
+
+    print(f"New origin and euler angles: origin[mm] = [{T[:3, 3]}] euler angels[deg]: {euler_angles}\n")
+    print(f"Old origin and euler angles: origin[mm] = [{[-0.815,	1.795,	-2.35]}] euler angels[deg]: {(0, 0, 0.0039*180/np.pi)}\n\n")
+
 
 if __name__ == '__main__':
     test_normal_vector()
     test_calculate_transform()
+    test_real_data()
