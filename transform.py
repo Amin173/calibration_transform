@@ -1,27 +1,59 @@
 import numpy as np
-from scipy.spatial.transform import Rotation as R
+
+
 
 def calculate_transform(xy_points, yz_points, xz_points, T_intial=np.eye(4)):
-    # Define the planes
+    """
+    Calculate transformation matrix from three planes to parent coordinate system.
+    
+    Parameters:
+    ________________________________________________________________
+    xy_points: list
+        3D points on xy plane.
+    yz_points: list
+        3D points on yz plane.
+    xz_points: list
+        3D points on xz plane.
+    T_initial: np.ndarray, optional
+        Initial transformation matrix from parent to child coordinate system. Default is identity matrix.
+    
+    Returns:
+    ________________________________________________________________
+    np.ndarray:
+        Transformation matrix from parent to child coordinate system.
+    """
+    # Define planes
     xy_plane = plane_from_points(xy_points)
     yz_plane = plane_from_points(yz_points)
     xz_plane = plane_from_points(xz_points)
 
-    # Find the intersection point of the three planes
+    # Find intersection of planes
     origin = intersection(xy_plane, yz_plane, xz_plane)
     origin = np.array(origin)
 
-    # Calculate the rotation matrix
+    # Calculate rotation matrix
     rot_mat = coordinate_system_rot_matrix(xy_plane, yz_plane, xz_plane, T_intial)
 
-    # Calculate the full transformation matrix
+    # Calculate full transformation matrix
     T = transformation_matrix(origin, rot_mat=rot_mat)
 
-    # Return the transformation matrix
     return T
 
 
 def plane_from_points(points):
+    """
+    Calculate plane coefficients from 3D points on plane.
+    
+    Parameters:
+    ________________________________________________________________
+    points: list
+        3D points on plane.
+    
+    Returns:
+    ________________________________________________________________
+    tuple: 
+        Coefficients (a, b, c, d) of plane ".
+    """
     if len(points) < 3:
         raise ValueError("Error: the number of points must be three or more.")
 
@@ -54,25 +86,56 @@ def plane_from_points(points):
 
 
 def intersection(plane1, plane2, plane3):
-    # Extract the coefficients of the three planes
+    """
+    Calculate intersection of three planes.
+    
+    Parameters:
+    ________________________________________________________________
+    plane1: tuple
+        Coefficients (a, b, c, d) of first plane".
+    plane2: tuple 
+        Coefficients (a, b, c, d) of second plane".
+    plane3: tuple
+        Coefficients (a, b, c, d) of third plane".
+    
+    Returns:
+    ________________________________________________________________
+    tuple: 
+        Coordinates (x, y, z) of intersection point.
+    """
+    # Extract plane coefficients
     a1, b1, c1, d1 = plane1
     a2, b2, c2, d2 = plane2
     a3, b3, c3, d3 = plane3
 
-    # Solve the system of linear equations formed by the three planes
-    # to find the point of intersection (x, y, z)
+    # Solve system of linear equations to find intersection point (x, y, z)
     A = np.array([[a1, b1, c1], [a2, b2, c2], [a3, b3, c3]])
     b = -np.array([d1, d2, d3])
-
-    # Compute the least square solution of Ax = b
     (x, y, z) = np.linalg.lstsq(A, b, rcond=None)[0]
-
-    # Return the point of intersection as a tuple
+    
     return (x, y, z)
 
 
 def coordinate_system_rot_matrix(plane1, plane2, plane3, T_intial):
-
+    """
+    Calculate rotation matrix for plane coordinate system.
+    
+    Parameters:
+    ________________________________________________________________
+    plane1: tuple
+        Coefficients (a, b, c, d) of first plane".
+    plane2: tuple
+        Coefficients (a, b, c, d) of second plane".
+    plane3: tuple
+        Coefficients (a, b, c, d) of third plane".
+    T_initial: np.ndarray
+        Initial transformation matrix from world to plane coordinate system.
+    
+    Returns:
+    ________________________________________________________________
+    np.ndarray: 
+        3x3 rotation matrix for plane coordinate system.
+    """
     x_axis, y_axis, z_axis = calculate_axes(plane1, plane2, plane3, T_intial)
 
     # Compute the roll, pitch, and yaw angles
@@ -83,63 +146,131 @@ def coordinate_system_rot_matrix(plane1, plane2, plane3, T_intial):
 
 
 def calculate_axes(plane1, plane2, plane3, T_intial):
-    # Compute the plane normals
+    """
+    Calculate coordinate system axes from plane normals.
+    
+    Parameters:
+    ________________________________________________________________
+    plane1: tuple
+        Coefficients (a, b, c, d) of first plane".
+    plane2: tuple
+        Coefficients (a, b, c, d) of second plane".
+    plane3: tuple
+        Coefficients (a, b, c, d) of third plane".
+    T_initial: np.ndarray
+        Initial transformation matrix from world to plane coordinate system.
+    
+    Returns:
+    ________________________________________________________________
+    tuple:
+        Coordinate system axes as column vectors.
+    """
+    # Compute plane normals
     n1 = np.array(plane1[:3])
     n2 = np.array(plane2[:3]) 
     n3 = np.array(plane3[:3])
 
-    # fix the plane normal directions using the T_init guess   
+    # Fix plane normal directions using T_intial guess
     n1 *= np.sign((T_intial @ [0, 0, 1, 1])[:3] @ n1)
     n2 *= np.sign((T_intial @ [1, 0, 0, 1])[:3] @ n2)
     n3 *= np.sign((T_intial @ [0, 1, 0, 1])[:3] @ n3)
 
-    # Orthogonalize the plane normals if any numerical errors exist
+    # Normalize and orthogonalize plane normals (fix numerical errors)
     n1, n2, n3 = gram_schmidt(n1, n2, n3)
 
-    # Compute the axes
+    # Compute axes
     x_axis = n2
     y_axis = n3
     z_axis = n1
 
-    # Return the axes
-    return x_axis, y_axis, z_axis
+    return (x_axis, y_axis, z_axis)
+
 
 def gram_schmidt(n1, n2, n3):
-    # Make a list of the input vectors
+    """
+    Normalize and orthogonalize plane normals using the Gram-Schmidt process.
+    
+    Parameters:
+    ________________________________________________________________
+    n1: np.ndarray
+        Normal vector for first plane.
+    n2: np.ndarray
+        Normal vector for second plane.
+    n3: np.ndarray
+        Normal vector for third plane.
+    
+    Returns:
+    ________________________________________________________________
+    tuple
+        Orthogonalized plane normals.
+    """
+    # Initialize list of input vectors
     vectors = [n1, n2, n3]
     
-    # Orthogonalize the vectors
+    # Orthogonalize vectors
     for i, v in enumerate(vectors):
         for j in range(i):
             v -= v.dot(vectors[j]) * vectors[j]
         v /= v.dot(v)**0.5
 
-    # Return the orthogonalized vectors
     return vectors
 
+
 def transformation_matrix(origin, rot_mat=None, euler_angles=None):
-    # Calculate the transformation matrix from the origin and the normal vectors of the planes
+    """
+    Calculate 4x4 transformation matrix from origin and orientation.
+    
+    Parameters:
+    ________________________________________________________________
+    origin: np.ndarray
+        Translation vector for transformation.
+    rot_mat: np.ndarray
+        Rotation matrix for transformation.
+    euler_angles: tuple, not used if rot_mat is not None
+        Tuple of Euler angles for transformation.
+    
+    Returns:
+    ________________________________________________________________
+    np.ndarray
+        4x4 transformation matrix.
+    """
     T = np.eye(4)
-    if not isinstance(rot_mat, type(None)):
+    if rot_mat is not None:
         T[:3, :3] = rot_mat
-    elif not isinstance(euler_angles, type(None)):
+    elif euler_angles is not None:
         roll, pitch, yaw = euler_angles
-        T[:3, :3] = euler_to_rotation(roll, pitch, yaw)
+        T[:3,:3] = euler_to_rotation(roll, pitch, yaw)
     else:
         raise ValueError("Error: either euler_angles or rot_mat must be specified")
     T[:3, 3] = origin
 
-    # Return the transformation matrix
     return T
 
 
 def euler_to_rotation(roll, pitch, yaw):
-    # Convert the angles to radians
+    """
+    Convert Euler angles to rotation matrix.
+    
+    Parameters:
+    ________________________________________________________________
+    roll: float
+        Rotation about x-axis in degrees.
+    pitch: float
+        Rotation about y-axis in degrees.
+    yaw: float
+        Rotation about z-axis in degrees.
+    
+    Returns:
+    ________________________________________________________________
+    np.ndarray
+        3x3 rotation matrix.
+    """
+    # Convert angles to radians
     roll = np.deg2rad(roll)
     pitch = np.deg2rad(pitch)
     yaw = np.deg2rad(yaw)
 
-    # Compute the rotation matrix
+    # Compute rotation matrix
     R_x = np.array([[1, 0, 0],
                     [0, np.cos(roll), -np.sin(roll)],
                     [0, np.sin(roll), np.cos(roll)]])
@@ -151,5 +282,4 @@ def euler_to_rotation(roll, pitch, yaw):
                     [0, 0, 1]])
     R = R_x @ R_y @ R_z
 
-    # Return the rotation matrix
     return R
