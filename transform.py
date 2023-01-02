@@ -101,11 +101,6 @@ def calculate_axes(plane1, plane2, plane3, T_intial):
     y_axis = n3
     z_axis = n1
 
-    # Normalize the axes
-    x_axis = x_axis / np.linalg.norm(x_axis)
-    y_axis = y_axis / np.linalg.norm(y_axis)
-    z_axis = z_axis / np.linalg.norm(z_axis)
-
     # Return the axes
     return x_axis, y_axis, z_axis
 
