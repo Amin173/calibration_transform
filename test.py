@@ -153,6 +153,18 @@ def test_calculate_transform():
     assert np.allclose(
         T, T4, rtol=1e-7, atol=1e-7), f'\n\n T: {T}\n\n T_true: {T4}\n'
 
+
+    # Test 4
+    T4 = transformation_matrix(origin=[0, 0, 0], euler_angles = (10, 10, -10))
+    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, 0))
+    xy_points4 = transform_points(xy_points1, T4)
+    yz_points4 = transform_points(yz_points1, T4)
+    xz_points4 = transform_points(xz_points1, T4)
+    # visualize_points(xy_points4, yz_points4, xz_points4)
+    T = calculate_transform(xy_points4, yz_points4, xz_points4, T_initial)
+    assert np.allclose(
+        T, T4, rtol=1e-7, atol=1e-7), f'\n\n T: {T}\n\n T_true: {T4}\n'
+
     print('full transform tests pass')
 
 

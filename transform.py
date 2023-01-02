@@ -52,7 +52,7 @@ def plane_from_points(points):
     Returns:
     ________________________________________________________________
     tuple: 
-        Coefficients (a, b, c, d) of plane ".
+        Coefficients (a, b, c, d) of plane.
     """
     if len(points) < 3:
         raise ValueError("Error: the number of points must be three or more.")
@@ -163,7 +163,7 @@ def calculate_axes(plane1, plane2, plane3, T_intial):
     Returns:
     ________________________________________________________________
     tuple:
-        Coordinate system axes as column vectors.
+        Coordinate system axes as row vectors.
     """
     # Compute plane normals
     n1 = np.array(plane1[:3])
