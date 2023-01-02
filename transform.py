@@ -28,39 +28,20 @@ def plane_from_points(points):
     # Convert the points to a matrix
     points = np.array(points)
 
-    if len(points) == 3:
-        # Extract the coordinates of the three points
-        x1, y1, z1 = points[0]
-        x2, y2, z2 = points[1]
-        x3, y3, z3 = points[2]
+    # Calculate the centroid of the points
+    centroid = np.mean(points, axis=0)
 
-        # Check if the points are collinear
-        area = 0.5 * \
-            np.linalg.norm(
-                np.cross((x2-x1, y2-y1, z2-z1), (x3-x1, y3-y1, z3-z1)))
-        if area == 0:
-            raise ValueError("Error: points are collinear")
+    # Subtract the centroid from each point
+    points_cent = points - centroid
 
-        # Compute the coefficients of the plane's equation
-        a = (y2 - y1) * (z3 - z1) - (z2 - z1) * (y3 - y1)
-        b = (z2 - z1) * (x3 - x1) - (x2 - x1) * (z3 - z1)
-        c = (x2 - x1) * (y3 - y1) - (y2 - y1) * (x3 - x1)
-        d = -(a * x1 + b * y1 + c * z1)
-    else:
-        # Calculate the centroid of the points
-        centroid = np.mean(points, axis=0)
+    # Calculate the SVD of the centered points
+    U, S, Vt = np.linalg.svd(points_cent)
 
-        # Subtract the centroid from each point
-        points_cent = points - centroid
+    # The last column of Vt is the solution to the least-squares problem
+    a, b, c = Vt[-1, :]
 
-        # Calculate the SVD of the centered points
-        U, S, Vt = np.linalg.svd(points_cent)
-
-        # The last column of Vt is the solution to the least-squares problem
-        a, b, c = Vt[-1, :]
-
-        # Calculate the constant term D
-        d = -(a*centroid[0] + b*centroid[1] + c*centroid[2])
+    # Calculate the constant term D
+    d = -(a*centroid[0] + b*centroid[1] + c*centroid[2])
 
     # Normalize the coefficients
     norm = np.sqrt(a**2 + b**2 + c**2)
