@@ -71,17 +71,6 @@ def intersection(plane1, plane2, plane3):
     return (x, y, z)
 
 
-def coordinate_system_euler(plane1, plane2, plane3, T_intial):
-
-    x_axis, y_axis, z_axis = calculate_axes(plane1, plane2, plane3, T_intial)
-
-    # Compute the roll, pitch, and yaw angles
-    roll, pitch, yaw = orientation_to_euler(x_axis, y_axis, z_axis)
-
-    # Return the roll, pitch, and yaw angles
-    return roll, pitch, yaw
-
-
 def coordinate_system_rot_matrix(plane1, plane2, plane3, T_intial):
 
     x_axis, y_axis, z_axis = calculate_axes(plane1, plane2, plane3, T_intial)
@@ -104,16 +93,12 @@ def calculate_axes(plane1, plane2, plane3, T_intial):
     n2 *= np.sign((T_intial @ [1, 0, 0, 1])[:3] @ n2)
     n3 *= np.sign((T_intial @ [0, 1, 0, 1])[:3] @ n3)
 
-    # Compute the x axis as the cross product of the yz and xz planes
-    x_axis = np.cross(n3, n1)
+    # Orthogonalize the plane normals if any numerical errors exist
+    n1, n2, n3 = gram_schmidt(n1, n2, n3)
+
+    # Compute the axes
     x_axis = n2
-
-    # Compute the y axis as the cross product of the xy and xz planes
-    y_axis = np.cross(n1, n2)
     y_axis = n3
-
-    # Compute the z axis as the cross product of the xy and yz planes
-    z_axis = np.cross(n2, n3)
     z_axis = n1
 
     # Normalize the axes
@@ -124,24 +109,18 @@ def calculate_axes(plane1, plane2, plane3, T_intial):
     # Return the axes
     return x_axis, y_axis, z_axis
 
+def gram_schmidt(n1, n2, n3):
+    # Make a list of the input vectors
+    vectors = [n1, n2, n3]
+    
+    # Orthogonalize the vectors
+    for i, v in enumerate(vectors):
+        for j in range(i):
+            v -= v.dot(vectors[j]) * vectors[j]
+        v /= v.dot(v)**0.5
 
-def orientation_to_euler(x_axis, y_axis, z_axis):
-
-    # Compute the roll angle
-    roll = np.arctan2(y_axis[2], z_axis[2])
-
-    # Compute the pitch angle
-    pitch = np.arcsin(-x_axis[2])
-
-    # Compute the yaw angle
-    yaw = np.arctan2(x_axis[1], x_axis[0])
-
-    r = R.from_matrix(np.vstack((x_axis, y_axis, z_axis)))
-    roll, pitch, yaw = r.as_euler('xyz', degrees=False)
-
-    # Return the roll, pitch, and yaw angles
-    return np.rad2deg(roll), np.rad2deg(pitch), np.rad2deg(yaw)
-
+    # Return the orthogonalized vectors
+    return vectors
 
 def transformation_matrix(origin, rot_mat=None, euler_angles=None):
     # Calculate the transformation matrix from the origin and the normal vectors of the planes
@@ -157,6 +136,7 @@ def transformation_matrix(origin, rot_mat=None, euler_angles=None):
 
     # Return the transformation matrix
     return T
+
 
 def euler_to_rotation(roll, pitch, yaw):
     # Convert the angles to radians
