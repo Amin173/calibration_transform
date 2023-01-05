@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 from transform import *
 from scipy.spatial.transform import Rotation as R
+import csv
 
 def test_normal_vector():
     # Test 1: Check normal vector of a plane with points on the xy plane
@@ -188,8 +189,50 @@ def test_real_data():
     print(f"New origin and euler angles: origin[mm] = [{T[:3, 3]}] euler angels[deg]: {euler_angles}\n")
     print(f"Old origin and euler angles: origin[mm] = [{[-0.815,	1.795,	-2.35]}] euler angels[deg]: {(0, 0, 0.0039*180/np.pi)}\n\n")
 
+def test_fake_data(file_path):
+    print("\n\n")
+    print("--------------------------------")
+    print("Fake data test results: ")
+    print("--------------------------------")
+
+    # Initialize lists to store the points for each plane
+    xy_points = []
+    yz_points = []
+    xz_points = []
+    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, 0))
+    # Read the CSV file and extract the points for each plane
+    with open(file_path, 'r') as f:
+        reader = csv.reader(f)
+
+        for i, row in enumerate(reader):
+            # Skip the first row
+            if i == 0:
+                continue
+
+            # Extract the x, y, z, and plane label from the row
+            x, y, z, plane_label = row
+            x, y, z = float(x), float(y), float(z)
+
+            # Append the point to the appropriate list
+            if plane_label.lower() == 'xy':
+                xy_points.append([x, y, z])
+            elif plane_label.lower() == 'yz':
+                yz_points.append([x, y, z])
+            elif plane_label.lower() == 'xz':
+                xz_points.append([x, y, z])
+
+    # Calculate the transformation matrix
+    T = calculate_transform(xy_points, yz_points, xz_points, T_initial)
+    euler_angles = R.from_matrix(T[:3, :3]).as_euler('ZYX', degrees=True)
+
+    print(f"Transform: {T}\n")
+    print(f"origin[mm] = [{T[:3, 3]}] ")
+    print(f"euler angels[deg]: {euler_angles}\n")
 
 if __name__ == '__main__':
-    test_normal_vector()
-    test_calculate_transform()
-    test_real_data()
+    # test_normal_vector()
+    # test_calculate_transform()
+    # test_real_data()
+
+    test_fake_data("./test_data/TestPoints_LowNoise.csv")
+    test_fake_data("./test_data/TestPoints_HighNoise.csv")
