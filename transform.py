@@ -1,6 +1,7 @@
+#/usr/bin/pyhon3
+
 import numpy as np
-
-
+from sklearn.linear_model import RANSACRegressor, LinearRegression, TheilSenRegressor
 
 def calculate_transform(xy_points, yz_points, xz_points, T_intial=np.eye(4)):
     """
@@ -40,7 +41,7 @@ def calculate_transform(xy_points, yz_points, xz_points, T_intial=np.eye(4)):
     return T
 
 
-def plane_from_points(points):
+def plane_from_points(points, inlier_threshold=0.5):
     """
     Calculate plane coefficients from 3D points on plane.
     
@@ -48,6 +49,8 @@ def plane_from_points(points):
     ________________________________________________________________
     points: list
         3D points on plane.
+    inlier_threshold: float, optional
+        Inlier threshold. Default is 0.5[mm].
     
     Returns:
     ________________________________________________________________
@@ -60,11 +63,28 @@ def plane_from_points(points):
     # Convert the points to a matrix
     points = np.array(points)
 
+    # Create a RANSAC regressor
+    ransac = RANSACRegressor(estimator=LinearRegression(), 
+                            max_trials=100, 
+                            min_samples=3, 
+                            loss='absolute_error', 
+                            residual_threshold=inlier_threshold, 
+                            random_state=0)
+
+    # Fit the model to the data
+    ransac.fit(points[:, :2], points[:, 2])
+
+    # Get the inlier mask
+    inlier_mask = ransac.inlier_mask_
+
+    # Use the inliers to estimate the plane equation
+    inlier_points = points[inlier_mask]
+
     # Calculate the centroid of the points
-    centroid = np.mean(points, axis=0)
+    centroid = np.mean(inlier_points, axis=0)
 
     # Subtract the centroid from each point
-    points_cent = points - centroid
+    points_cent = inlier_points - centroid
 
     # Calculate the SVD of the centered points
     U, S, Vt = np.linalg.svd(points_cent)
