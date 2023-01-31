@@ -2,6 +2,22 @@ import matplotlib.pyplot as plt
 from transform import *
 from scipy.spatial.transform import Rotation as R
 import csv
+import json 
+
+def get_points_from_json(json_file):
+    with open(json_file) as f:
+        data = json.load(f)
+    xy_points = []
+    yz_points = []
+    xz_points = []
+    for point in data:
+        if point['description'] == 'xy':
+            xy_points.append([point["coordinates"]['x']["mu"], point["coordinates"]['y']["mu"], point["coordinates"]['z']["mu"]])
+        elif point['description'] == 'yz':
+            yz_points.append([point["coordinates"]['x']["mu"], point["coordinates"]['y']["mu"], point["coordinates"]['z']["mu"]])
+        elif point['description'] == 'xz':
+            xz_points.append([point["coordinates"]['x']["mu"], point["coordinates"]['y']["mu"], point["coordinates"]['z']["mu"]])
+    return xy_points, yz_points, xz_points
 
 def test_normal_vector():
     # Test 1: Check normal vector of a plane with points on the xy plane
@@ -35,82 +51,83 @@ def test_normal_vector():
     print('plane normal tests pass')
 
 
+def transform_points(points, T):
+    # Convert the points to a homogeneous representation
+    points_homogeneous = np.hstack((points, np.ones((len(points), 1))))
+
+    # Transform the points using the inverse of T
+    points_homogeneous_transformed = T @ points_homogeneous.T
+
+    # Convert the points back to a non-homogeneous representation
+    points_transformed = points_homogeneous_transformed[:3,
+                                                        :] / points_homogeneous_transformed[3, :]
+
+    return points_transformed.T
+
+def plot_plane(ax, points, color='yellow'):
+
+    # Calculate the plane coefficients for the set of points
+    a, b, c, d = plane_from_points(points)
+
+    # Compute the constants a, b, c, and d in the equation of the plane
+    if c != 0:
+        X, Y = np.meshgrid(range(-5, 5), range(-5, 5))
+        Z = (-d - a * X - b * Y) * 1. / c
+    elif abs(b)>=abs(a):
+        X, Z = np.meshgrid(range(-5, 5), range(-5, 5))
+        Y = (-a * X - c * Z - d)/b
+    elif a != 0:
+        Y, Z = np.meshgrid(range(-5, 5), range(-5, 5))
+        X = (-b * Y - c * Z - d)/a
+    else:
+        raise ValueError(
+            "Error: plane coefficents a, b, c can not all be zero")
+
+    # Plot the plane
+    ax.plot_surface(X, Y, Z, alpha=0.5, color=color)
+
+def visualize_points(xy_points, yz_points, xz_points, show_planes=False):
+    # Convert the points to NumPy arrays
+    xy_points = np.array(xy_points)
+    yz_points = np.array(yz_points)
+    xz_points = np.array(xz_points)
+
+    # Set up the figure
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    # Plot the points
+    ax.scatter(xy_points[:, 0], xy_points[:, 1],
+                xy_points[:, 2], c='r', marker='o', alpha=0.2)
+    ax.scatter(yz_points[:, 0], yz_points[:, 1],
+                yz_points[:, 2], c='g', marker='x', alpha=0.2)
+    ax.scatter(xz_points[:, 0], xz_points[:, 1],
+                xz_points[:, 2], c='b', marker='*', alpha=0.2)
+
+    if show_planes:
+        # Plot the planes
+        plot_plane(ax, xy_points, color='red')
+        plot_plane(ax, yz_points, color='green')
+        plot_plane(ax, xz_points, color='blue')
+
+    # Set the axis labels
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    # Set the axis limits
+    ax.set_xlim([-5, 5])
+    ax.set_ylim([-5, 5])
+    ax.set_zlim([-5, 5])
+
+    # set the axes scales equal
+    plt.axis('equal')
+
+    # Show the plot
+    plt.show()
+
 def test_calculate_transform():
 
-    def transform_points(points, T):
-        # Convert the points to a homogeneous representation
-        points_homogeneous = np.hstack((points, np.ones((len(points), 1))))
-
-        # Transform the points using the inverse of T
-        points_homogeneous_transformed = T @ points_homogeneous.T
-
-        # Convert the points back to a non-homogeneous representation
-        points_transformed = points_homogeneous_transformed[:3,
-                                                            :] / points_homogeneous_transformed[3, :]
-
-        return points_transformed.T
-
-    def plot_plane(ax, points, color='yellow'):
-
-        # Calculate the plane coefficients for the set of points
-        a, b, c, d = plane_from_points(points)
-
-        # Compute the constants a, b, c, and d in the equation of the plane
-        if c != 0:
-            X, Y = np.meshgrid(range(-5, 5), range(-5, 5))
-            Z = (-d - a * X - b * Y) * 1. / c
-        elif abs(b)>=abs(a):
-            X, Z = np.meshgrid(range(-5, 5), range(-5, 5))
-            Y = (-a * X - c * Z - d)/b
-        elif a != 0:
-            Y, Z = np.meshgrid(range(-5, 5), range(-5, 5))
-            X = (-b * Y - c * Z - d)/a
-        else:
-            raise ValueError(
-                "Error: plane coefficents a, b, c can not all be zero")
-
-        # Plot the plane
-        ax.plot_surface(X, Y, Z, alpha=0.5, color=color)
-
-    def visualize_points(xy_points, yz_points, xz_points, show_planes=False):
-        # Convert the points to NumPy arrays
-        xy_points = np.array(xy_points)
-        yz_points = np.array(yz_points)
-        xz_points = np.array(xz_points)
-
-        # Set up the figure
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        # Plot the points
-        ax.scatter(xy_points[:, 0], xy_points[:, 1],
-                   xy_points[:, 2], c='r', marker='o', alpha=0.2)
-        ax.scatter(yz_points[:, 0], yz_points[:, 1],
-                   yz_points[:, 2], c='g', marker='x', alpha=0.2)
-        ax.scatter(xz_points[:, 0], xz_points[:, 1],
-                   xz_points[:, 2], c='b', marker='*', alpha=0.2)
-
-        if show_planes:
-            # Plot the planes
-            plot_plane(ax, xy_points, color='red')
-            plot_plane(ax, yz_points, color='green')
-            plot_plane(ax, xz_points, color='blue')
-
-        # Set the axis labels
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
-
-        # Set the axis limits
-        ax.set_xlim([-5, 5])
-        ax.set_ylim([-5, 5])
-        ax.set_zlim([-5, 5])
-
-        # set the axes scales equal
-        plt.axis('equal')
-
-        # Show the plot
-        plt.show()
 
     # Test 1
     T1 = np.eye(4)
@@ -189,6 +206,25 @@ def test_real_data():
     print(f"New origin and euler angles: origin[mm] = [{T[:3, 3]}] euler angels[deg]: {euler_angles}\n")
     print(f"Old origin and euler angles: origin[mm] = [{[-0.815,	1.795,	-2.35]}] euler angels[deg]: {(0, 0, 0.0039*180/np.pi)}\n\n")
 
+def test_real_data_2(file_path):
+    print("\n\n")
+    print("--------------------------------")
+    print("Real data test results: ")
+    print("--------------------------------")
+
+    # Test 1
+    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, -90))
+    xy_points1, yz_points1, xz_points1 = get_points_from_json(file_path)
+    T = calculate_transform(xy_points1, yz_points1, xz_points1, T_initial)
+    
+    euler_angles = R.from_matrix(T[:3, :3]).as_euler('XYZ', degrees=True)
+
+    print(f"New transform: {T}\n")
+    print(f"Old transform: {T_initial}\n\n")
+
+    print(f"New origin and euler angles: origin[mm] = [{T[:3, 3]}] euler angels[deg]: {euler_angles}\n")
+    print(f"Old origin and euler angles: origin[mm] = [{[-0.815,	1.795,	-2.35]}] euler angels[deg]: {(0, 0, -90)}\n\n")
+
 def test_fake_data(file_path):
     print("\n\n")
     print("--------------------------------")
@@ -234,5 +270,8 @@ if __name__ == '__main__':
     # test_calculate_transform()
     # test_real_data()
 
-    test_fake_data("./test_data/TestPoints_LowNoise.csv")
-    test_fake_data("./test_data/TestPoints_HighNoise.csv")
+    # test_fake_data("./test_data/TestPoints_LowNoise.csv")
+    # test_fake_data("./test_data/TestPoints_HighNoise.csv")
+
+    test_real_data_2("./test_data/measurements-1.json")
+    test_real_data_2("./test_data/measurements-2.json")
