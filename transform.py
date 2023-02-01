@@ -71,14 +71,18 @@ def plane_from_points(points, inlier_threshold=0.5):
                             residual_threshold=inlier_threshold, 
                             random_state=0)
 
-    # Fit the model to the data
-    ransac.fit(points[:, :2], points[:, 2])
+    try:
+        # Fit the model to the data
+        ransac.fit(points[:, :2], points[:, 2])
 
-    # Get the inlier mask
-    inlier_mask = ransac.inlier_mask_
+        # Get the inlier mask
+        inlier_mask = ransac.inlier_mask_
 
-    # Use the inliers to estimate the plane equation
-    inlier_points = points[inlier_mask]
+        # Use the inliers to estimate the plane equation
+        inlier_points = points[inlier_mask]
+    except ValueError as e:
+        print("Error: {}".format(e))
+        inlier_points = points
 
     # Calculate the centroid of the points
     centroid = np.mean(inlier_points, axis=0)
