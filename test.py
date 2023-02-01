@@ -140,46 +140,46 @@ def test_calculate_transform():
 
     # # Test 2
     T4 = transformation_matrix(origin=[1, 2, 3], euler_angles = (10, 10, 200))
-    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, 180))
+    R_initial = euler_to_rotation(0, 0, 180)
     xy_points4 = transform_points(xy_points1, T4)
     yz_points4 = transform_points(yz_points1, T4)
     xz_points4 = transform_points(xz_points1, T4)
     # visualize_points(xy_points4, yz_points4, xz_points4)
-    T = calculate_transform(xy_points4, yz_points4, xz_points4, T_initial)
+    T = calculate_transform(xy_points4, yz_points4, xz_points4, R_initial)
     assert np.allclose(
         T, T4, rtol=1e-7, atol=1e-7), f'\n\n T: {T}\n\n T_true: {T4}\n'
 
     # Test 3
     T4 = transformation_matrix(origin=[1, 2, 3], euler_angles = (10, 100, 80))
-    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 90, 90))
+    R_initial = euler_to_rotation(0, 90, 90)
     xy_points4 = transform_points(xy_points1, T4)
     yz_points4 = transform_points(yz_points1, T4)
     xz_points4 = transform_points(xz_points1, T4)
     # visualize_points(xy_points4, yz_points4, xz_points4)
-    T = calculate_transform(xy_points4, yz_points4, xz_points4, T_initial)
+    T = calculate_transform(xy_points4, yz_points4, xz_points4, R_initial)
     assert np.allclose(
         T, T4, rtol=1e-7, atol=1e-7), f'\n\n T: {T}\n\n T_true: {T4}\n'
 
     # Test 4
     T4 = transformation_matrix(origin=[1, 2, 3], euler_angles = (10, 10, -10))
-    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, 0))
+    R_initial = euler_to_rotation(0, 0, 0)
     xy_points4 = transform_points(xy_points1, T4)
     yz_points4 = transform_points(yz_points1, T4)
     xz_points4 = transform_points(xz_points1, T4)
     # visualize_points(xy_points4, yz_points4, xz_points4)
-    T = calculate_transform(xy_points4, yz_points4, xz_points4, T_initial)
+    T = calculate_transform(xy_points4, yz_points4, xz_points4, R_initial)
     assert np.allclose(
         T, T4, rtol=1e-7, atol=1e-7), f'\n\n T: {T}\n\n T_true: {T4}\n'
 
 
     # Test 4
     T4 = transformation_matrix(origin=[0, 0, 0], euler_angles = (10, 10, -10))
-    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, 0))
+    R_initial = euler_to_rotation(0, 0, 0)
     xy_points4 = transform_points(xy_points1, T4)
     yz_points4 = transform_points(yz_points1, T4)
     xz_points4 = transform_points(xz_points1, T4)
     # visualize_points(xy_points4, yz_points4, xz_points4)
-    T = calculate_transform(xy_points4, yz_points4, xz_points4, T_initial)
+    T = calculate_transform(xy_points4, yz_points4, xz_points4, R_initial)
     assert np.allclose(
         T, T4, rtol=1e-7, atol=1e-7), f'\n\n T: {T}\n\n T_true: {T4}\n'
 
@@ -193,11 +193,11 @@ def test_real_data():
 
     # Test 1
     T1 = transformation_matrix(origin=[-0.815,	1.795,	-2.35], euler_angles = (0, 0, 0.0039*180/np.pi))
-    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, 0))
+    R_initial = euler_to_rotation(0, 0, 0)
     xy_points1 = np.array([[47.864, 32.161, -2.96], [47.864, 271.839, -2.12], [185.649, 271.839, -1.74], [185.649, 32.161, -2.58]])
     xz_points1 = np.array([[34.83,	1.9,	-12.70], [183.315, 2.37, -12.70], [109.0725,	2.135,	0]])
     yz_points1 = np.array([[-1.01,	32.909,	-12.70], [-2.34,	270.754,	-12.70], [-1.675,	151.8315,	0]])
-    T = calculate_transform(xy_points1, yz_points1, xz_points1, T_initial)
+    T = calculate_transform(xy_points1, yz_points1, xz_points1, R_initial)
     euler_angles = R.from_matrix(T[:3, :3]).as_euler('ZYX', degrees=True)
 
     print(f"New transform: {T}\n")
@@ -213,14 +213,14 @@ def test_real_data_2(file_path):
     print("--------------------------------")
 
     # Test 1
-    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, -90))
+    R_initial = euler_to_rotation(0, 0, -90)
     xy_points1, yz_points1, xz_points1 = get_points_from_json(file_path)
-    T = calculate_transform(xy_points1, yz_points1, xz_points1, T_initial)
+    T = calculate_transform(xy_points1, yz_points1, xz_points1, R_initial)
     
     euler_angles = R.from_matrix(T[:3, :3]).as_euler('XYZ', degrees=True)
 
     print(f"New transform: {T}\n")
-    print(f"Old transform: {T_initial}\n\n")
+    print(f"Old transform: {R_initial}\n\n")
 
     print(f"New origin and euler angles: origin[mm] = [{T[:3, 3]}] euler angels[deg]: {euler_angles}\n")
     print(f"Old origin and euler angles: origin[mm] = [{[-0.815,	1.795,	-2.35]}] euler angels[deg]: {(0, 0, -90)}\n\n")
@@ -235,7 +235,7 @@ def test_fake_data(file_path):
     xy_points = []
     yz_points = []
     xz_points = []
-    T_initial = transformation_matrix(origin=[0,0,0], euler_angles = (0, 0, 0))
+    R_initial = euler_to_rotation(0, 0, 0)
     # Read the CSV file and extract the points for each plane
     with open(file_path, 'r') as f:
         reader = csv.reader(f)
@@ -258,7 +258,7 @@ def test_fake_data(file_path):
                 xz_points.append([x, y, z])
 
     # Calculate the transformation matrix
-    T = calculate_transform(xy_points, yz_points, xz_points, T_initial)
+    T = calculate_transform(xy_points, yz_points, xz_points, R_initial)
     euler_angles = R.from_matrix(T[:3, :3]).as_euler('ZYX', degrees=True)
 
     print(f"Transform: {T}\n")
@@ -266,12 +266,12 @@ def test_fake_data(file_path):
     print(f"euler angels[deg]: {euler_angles}\n")
 
 if __name__ == '__main__':
-    # test_normal_vector()
-    # test_calculate_transform()
-    # test_real_data()
+    test_normal_vector()
+    test_calculate_transform()
+    test_real_data()
 
-    # test_fake_data("./test_data/TestPoints_LowNoise.csv")
-    # test_fake_data("./test_data/TestPoints_HighNoise.csv")
+    test_fake_data("./test_data/TestPoints_LowNoise.csv")
+    test_fake_data("./test_data/TestPoints_HighNoise.csv")
 
     test_real_data_2("./test_data/measurements-1.json")
     test_real_data_2("./test_data/measurements-2.json")

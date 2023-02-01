@@ -3,7 +3,7 @@
 import numpy as np
 from sklearn.linear_model import RANSACRegressor, LinearRegression, TheilSenRegressor
 
-def calculate_transform(xy_points, yz_points, xz_points, T_intial=np.eye(4)):
+def calculate_transform(xy_points, yz_points, xz_points, R_initial=np.eye(3)):
     """
     Calculate transformation matrix from three planes to parent coordinate system.
     
@@ -33,7 +33,7 @@ def calculate_transform(xy_points, yz_points, xz_points, T_intial=np.eye(4)):
     origin = np.array(origin)
 
     # Calculate rotation matrix
-    rot_mat = coordinate_system_rot_matrix(xy_plane, yz_plane, xz_plane, T_intial)
+    rot_mat = coordinate_system_rot_matrix(xy_plane, yz_plane, xz_plane, R_initial)
 
     # Calculate full transformation matrix
     T = transformation_matrix(origin, rot_mat=rot_mat)
@@ -65,7 +65,7 @@ def plane_from_points(points, inlier_threshold=0.5):
 
     # Create a RANSAC regressor
     ransac = RANSACRegressor(estimator=LinearRegression(), 
-                            max_trials=100, 
+                            max_trials=300, 
                             min_samples=3, 
                             loss='absolute_error', 
                             residual_threshold=inlier_threshold, 
@@ -136,7 +136,7 @@ def intersection(plane1, plane2, plane3):
     return (x, y, z)
 
 
-def coordinate_system_rot_matrix(plane1, plane2, plane3, T_intial):
+def coordinate_system_rot_matrix(plane1, plane2, plane3, R_initial):
     """
     Calculate rotation matrix for plane coordinate system.
     
@@ -156,7 +156,7 @@ def coordinate_system_rot_matrix(plane1, plane2, plane3, T_intial):
     np.ndarray: 
         3x3 rotation matrix for plane coordinate system.
     """
-    x_axis, y_axis, z_axis = calculate_axes(plane1, plane2, plane3, T_intial)
+    x_axis, y_axis, z_axis = calculate_axes(plane1, plane2, plane3, R_initial)
 
     # Compute the roll, pitch, and yaw angles
     rot_mat = np.vstack((x_axis, y_axis, z_axis)).T
@@ -165,7 +165,7 @@ def coordinate_system_rot_matrix(plane1, plane2, plane3, T_intial):
     return rot_mat
 
 
-def calculate_axes(plane1, plane2, plane3, T_intial):
+def calculate_axes(plane1, plane2, plane3, R_initial):
     """
     Calculate coordinate system axes from plane normals.
     
@@ -190,10 +190,10 @@ def calculate_axes(plane1, plane2, plane3, T_intial):
     n2 = np.array(plane2[:3]) 
     n3 = np.array(plane3[:3])
 
-    # Fix plane normal directions using T_intial guess
-    n1 *= np.sign((T_intial @ [0, 0, 1, 1])[:3] @ n1)
-    n2 *= np.sign((T_intial @ [1, 0, 0, 1])[:3] @ n2)
-    n3 *= np.sign((T_intial @ [0, 1, 0, 1])[:3] @ n3)
+    # Fix plane normal directions using R_initial guess
+    n1 *= np.sign((R_initial @ [0, 0, 1]) @ n1)
+    n2 *= np.sign((R_initial @ [1, 0, 0]) @ n2)
+    n3 *= np.sign((R_initial @ [0, 1, 0]) @ n3)
 
     # Normalize and orthogonalize plane normals (fix numerical errors)
     n1, n2, n3 = gram_schmidt(n1, n2, n3)
